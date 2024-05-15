@@ -1,8 +1,10 @@
 package top.anyel.hola.controller;
 
+import org.springframework.cglib.core.Local;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 import top.anyel.hola.entities.Greeting;
+import top.anyel.hola.entities.GreetingRequest;
 
 import java.time.LocalDate;
 import java.time.Period;
@@ -11,7 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @RestController
 public class GreetingController {
 
-    private static final String template = "Hola, %s";
+    private static final String template = "Hola, %s %s! Ud. vive en %s y nacio el %s. ";
     private final AtomicLong counter = new AtomicLong();
 
     @GetMapping("/greeting")
@@ -25,26 +27,47 @@ public class GreetingController {
                 String.format(template, name, lastName, address, formattedDate), (age));
     }
 
-    @GetMapping("/presentation/{name}/{lastname}/{age}")
-    public Greeting presentation(@PathVariable(value = "name") String name,
-                                 @PathVariable(value="lastname") String lastname,
-                                 @PathVariable(value="age") int age
-                                 ) {
-        return new Greeting(counter.incrementAndGet(), String.format("Hola, %s %s!", name, lastname), age);
+    // path variable
+    @GetMapping("/greeting/{name}/{lastName}/{address}/{birthdate}")
+    public Greeting greetingPath(@PathVariable String name,
+                                 @PathVariable String lastName,
+                                 @PathVariable String address,
+                                 @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate birthdate) {
+        String formattedDate = birthdate.toString(); // convertir la fecha a string
+        int age = calculateAge(birthdate); // calcular la edad
+        return new Greeting(counter.incrementAndGet(),
+                String.format(template, name, lastName, address, formattedDate), (age));
     }
 
-    @GetMapping("/byebye")
-    public Greeting byebye(@RequestBody Greeting greeting) {
+    @PostMapping("/greeting/body")
+    public Greeting greetingBody(@RequestBody GreetingRequest greetingRequest) {
+        String name = greetingRequest.name();
+        String lastName = greetingRequest.lastName();
+        String address = greetingRequest.address();
+        LocalDate birthdate = greetingRequest.birthdate();
 
-        return new Greeting(counter.incrementAndGet(), (greeting.content()), greeting.age());
+        String formattedDate = birthdate.toString(); // convertir la fecha a string
+        int age = calculateAge(birthdate); // calcular la edad
+        return new Greeting(counter.incrementAndGet(),
+                String.format(template, name, lastName, address, formattedDate), age);
     }
 
+
+    // request parms and path
+    @GetMapping("/greeting/{lastname}")
+    public Greeting greetingRequest(@PathVariable (value = "lastname") String lastname,
+                            @RequestParam(value = "name", defaultValue = "Angel") String name,
+                            @RequestParam(value="age", defaultValue = "22") int age
+                            )
+    {
+        return new Greeting(counter.incrementAndGet(),
+                (name), (age));
+    }
 
     @GetMapping("/")
     public String home() {
         return "Hello World!";
     }
-
 
     private int calculateAge(LocalDate birthdate) {
         LocalDate currentDate = LocalDate.now(); // obtener la fecha actual
